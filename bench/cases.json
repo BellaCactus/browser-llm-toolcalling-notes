@@ -1,0 +1,6 @@
+[
+  { "query": "what perks can roll on calus mini-tool?", "expectedTool": "item_lookup" },
+  { "query": "what does incandescent do?", "expectedTool": "perk_lookup" },
+  { "query": "what is iron banner?", "expectedTool": "activity_lookup" },
+  { "query": "explain resilience in pve", "expectedTool": "none" }
+]
