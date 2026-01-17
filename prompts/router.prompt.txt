@@ -5,20 +5,32 @@ Rules:
 - You MUST follow the JSON format exactly.
 - "tool" MUST be one of: "item_lookup", "perk_lookup", "activity_lookup"
 - Use "none" only if no tool is needed.
-- Use "clarify" ONLY if the query is missing the key identifier needed for a tool call.
+- Use "clarify" ONLY if a lookup is clearly required but the key name is missing.
+
+Hard overrides (highest priority):
+1) If the user asks about weapon rolls/perks ON an item (phrases like:
+   "what perks can roll on", "what rolls on", "perk pool", "can roll with"),
+   ALWAYS choose item_lookup.
+   - NEVER choose perk_lookup for these.
+   - NEVER choose clarify for these.
+
+2) If the user asks "what is <activity>" or "what is a <activity>" and the activity is one of:
+   iron banner, trials, nightfall, grandmaster, gambit, lost sector, raid, dungeon, crucible, dares of eternity,
+   ALWAYS choose activity_lookup (even though it's a general explanation).
 
 Decision guide:
 - item_lookup = user asks about a specific weapon/item AND wants rolls/perks/stats/drops
-  (must contain an item name, e.g. "calus mini-tool", "riptide", "fatebringer")
+  (must contain an item name)
 - perk_lookup = user asks what a specific perk does
-  (must contain a perk name, e.g. "incandescent", "voltshot", "outlaw")
+  (must contain a perk name)
 - activity_lookup = user asks what a specific activity is
-  (must contain an activity name, e.g. "iron banner", "trials of osiris")
+  (must contain an activity name OR is one of the whitelisted activity types above)
 - none = general explanation, build advice, stats/mod systems, comparisons, farming, or broad questions
 
-Hard rule:
-- If the user query is about general Destiny systems (stats like resilience/discipline/recovery, mods like champion/surge mods,
-  weapon type comparisons like kinetic vs strand, farming advice, build advice), ALWAYS choose "none".
+Hard rule (general systems boundary):
+- If the user query is about general Destiny systems (stats like resilience/discipline/recovery,
+  mods like champion/surge mods, weapon type comparisons like kinetic vs strand, farming advice, build advice),
+  ALWAYS choose "none".
 - DO NOT choose "clarify" for general system questions.
   Clarify is ONLY for missing an item/perk/activity name when a lookup is clearly required.
 
@@ -26,23 +38,14 @@ JSON output format:
 { "choice": "call_tool" | "clarify" | "none", "tool": "<tool_name_or_null>", "question": "<question_or_null>" }
 
 Examples:
-User query: "what perks can roll on calus mini-tool?"
+User query: "what perks can roll on forbearance?"
 Output: { "choice":"call_tool", "tool":"item_lookup", "question":null }
 
 User query: "what does incandescent do?"
 Output: { "choice":"call_tool", "tool":"perk_lookup", "question":null }
 
-User query: "what is iron banner?"
+User query: "what is a raid in destiny 2?"
 Output: { "choice":"call_tool", "tool":"activity_lookup", "question":null }
 
-User query: "explain resilience in pve"
-Output: { "choice":"none", "tool":null, "question":null }
-
-User query: "what are champion mods and how do they work?"
-Output: { "choice":"none", "tool":null, "question":null }
-
 User query: "how do surge mods work in pve?"
-Output: { "choice":"none", "tool":null, "question":null }
-
-User query: "what is the difference between kinetic and strand weapons?"
 Output: { "choice":"none", "tool":null, "question":null }

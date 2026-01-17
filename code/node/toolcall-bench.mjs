@@ -16,7 +16,7 @@ function p(...parts) {
 
 const ajv = new Ajv({ allErrors: true, strict: false });
 
-// tiny example schemas (swap these to match your real tools)
+// tool arg schemas (swap these to match your real tools)
 const toolArgSchemas = {
   item_lookup: {
     type: "object",
@@ -65,14 +65,17 @@ function nowMs() {
   return Date.now();
 }
 
+function safeFilename(s) {
+  return s.replace(/[^a-zA-Z0-9._-]+/g, "_").slice(0, 80);
+}
+
 /**
  * REAL model call via Ollama local server.
- * Make sure Ollama is running (it usually is).
- * Endpoint: http://127.0.0.1:11434
+ * Set model via env:
+ *   $env:MODEL="qwen2.5:14b"
+ *   node toolcall-bench.mjs
  */
-async function generate(prompt) {
-  const model = "qwen2.5:14b";
-
+async function generate(prompt, model) {
   const res = await fetch("http://127.0.0.1:11434/api/generate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -93,14 +96,14 @@ async function generate(prompt) {
   return data.response;
 }
 
-async function router(userQuery) {
+async function router(userQuery, model) {
   const routerPromptPath = p("prompts", "router.prompt.txt");
   const base = fs.readFileSync(routerPromptPath, "utf8");
 
   const prompt = `${base}\n\nUser query: ${userQuery}`;
 
   const t0 = nowMs();
-  const raw = await generate(prompt);
+  const raw = await generate(prompt, model);
   const ms = nowMs() - t0;
 
   const parsed = tryParseJson(raw);
@@ -124,7 +127,7 @@ async function router(userQuery) {
   return { ok: true, raw, ms, out: { choice: "none", tool: null, question: null } };
 }
 
-async function executor(userQuery, tool) {
+async function executor(userQuery, tool, model) {
   const executorPromptPath = p("prompts", "executor.prompt.txt");
   const base = fs.readFileSync(executorPromptPath, "utf8");
 
@@ -138,7 +141,7 @@ async function executor(userQuery, tool) {
   ].join("\n\n");
 
   const t0 = nowMs();
-  const raw = await generate(prompt);
+  const raw = await generate(prompt, model);
   const ms = nowMs() - t0;
 
   const parsed = tryParseJson(raw);
@@ -156,86 +159,140 @@ async function executor(userQuery, tool) {
   return { ok: true, raw, ms, toolcall: { tool, args: o.args } };
 }
 
-async function main() {
+/**
+ * Run benchmark.
+ * Returns summary + detailed rows, and also writes JSON file.
+ */
+export async function runBench(model, { verbose = true } = {}) {
   const casesPath = p("bench", "cases.json");
   const cases = JSON.parse(fs.readFileSync(casesPath, "utf8"));
 
-  let jsonOk = 0;
-  let toolCorrect = 0;
   let total = 0;
+
+  let jsonOk = 0;
+  let schemaOk = 0;
+
+  let strictCorrect = 0;
+  let acceptableCorrect = 0;
+
+  let clarifyCount = 0;
+
+  let routerMsSum = 0;
+  let execMsSum = 0;
 
   const results = [];
 
   for (const c of cases) {
     total++;
 
-    const r = await router(c.query);
+    const r = await router(c.query, model);
 
-    let finalTool = "none";
+    let gotTool = "none";
     let status = "ok";
     let execMs = 0;
 
+    let routerJsonOk = false;
+    let execSchemaOk = false;
+
     if (!r.ok) {
       status = "router_fail";
-    } else if (r.out.choice === "clarify") {
-      finalTool = "clarify";
-      status = "clarify";
-      jsonOk++;
-    } else if (r.out.choice === "none") {
-      finalTool = "none";
-      status = "none";
-      jsonOk++;
+      gotTool = "none";
     } else {
+      routerJsonOk = true;
       jsonOk++;
-      const chosenTool = r.out.tool;
 
-      const ex = await executor(c.query, chosenTool);
-      execMs = ex.ms;
+      const out = r.out;
 
-      if (!ex.ok) {
-        status = "executor_fail";
-        finalTool = chosenTool;
+      if (out.choice === "clarify") {
+        gotTool = "clarify";
+        status = "clarify";
+        clarifyCount++;
+      } else if (out.choice === "none") {
+        gotTool = "none";
+        status = "none";
       } else {
-        status = "toolcall_ok";
-        finalTool = chosenTool;
+        // call_tool
+        const chosenTool = out.tool;
+        gotTool = chosenTool;
+
+        const ex = await executor(c.query, chosenTool, model);
+        execMs = ex.ms;
+
+        if (!ex.ok) {
+          status = "executor_fail";
+        } else {
+          status = "toolcall_ok";
+          execSchemaOk = true;
+          schemaOk++;
+        }
       }
     }
 
-    if (finalTool === c.expectedTool) toolCorrect++;
+    routerMsSum += r.ms;
+    execMsSum += execMs;
+
+    const strictHit = gotTool === c.expectedTool;
+    const acceptableHit = strictHit || gotTool === "clarify";
+
+    if (strictHit) strictCorrect++;
+    if (acceptableHit) acceptableCorrect++;
 
     results.push({
       query: c.query,
       expectedTool: c.expectedTool,
-      gotTool: finalTool,
+      gotTool,
       status,
       routerMs: r.ms,
-      execMs
+      execMs,
+      routerOk: r.ok,
+      routerJsonOk,
+      executorSchemaOk: execSchemaOk
     });
 
-    console.log("\n---");
-    console.log("query:", c.query);
-    console.log("expected:", c.expectedTool);
-    console.log("got:", finalTool);
-    console.log("status:", status);
-    console.log("routerMs:", r.ms, "execMs:", execMs);
-    if (!r.ok) console.log("routerErr:", r.err);
+    if (verbose) {
+      console.log("\n---");
+      console.log("query:", c.query);
+      console.log("expected:", c.expectedTool);
+      console.log("got:", gotTool);
+      console.log("status:", status);
+      console.log("routerMs:", r.ms, "execMs:", execMs);
+      if (!r.ok) console.log("routerErr:", r.err);
+    }
   }
 
   const summary = {
+    model,
     total,
     jsonValidityRate: Number(((jsonOk / total) * 100).toFixed(1)),
-    toolAccuracyRate: Number(((toolCorrect / total) * 100).toFixed(1))
+    schemaValidityRate: Number(((schemaOk / Math.max(1, total)) * 100).toFixed(1)),
+    strictToolAccuracyRate: Number(((strictCorrect / total) * 100).toFixed(1)),
+    acceptableAccuracyRate: Number(((acceptableCorrect / total) * 100).toFixed(1)),
+    clarifyRate: Number(((clarifyCount / total) * 100).toFixed(1)),
+    avgRouterMs: Math.round(routerMsSum / total),
+    avgExecMs: Math.round(execMsSum / total)
   };
 
-  console.log("\n====== SUMMARY ======");
-  console.log(summary);
+  if (verbose) {
+    console.log("\n====== SUMMARY ======");
+    console.log(summary);
+  }
 
-  const outPath = p("bench", "results", "latest.json");
+  const outName = `latest_${safeFilename(model)}.json`;
+  const outPath = p("bench", "results", outName);
   fs.writeFileSync(outPath, JSON.stringify({ summary, results }, null, 2), "utf8");
-  console.log("wrote results:", outPath);
+
+  if (verbose) {
+    console.log("wrote results:", outPath);
+  }
+
+  return { summary, results, outPath };
 }
 
-main().catch((e) => {
-  console.error("FATAL:", e);
-  process.exit(1);
-});
+// allow running directly
+if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(__filename)) {
+  const model = process.env.MODEL || "qwen2.5:14b";
+  runBench(model, { verbose: true }).catch((e) => {
+    console.error("FATAL:", e);
+    process.exit(1);
+  });
+}

@@ -4,14 +4,10 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "bench": "node code/node/toolcall-bench.js",
-    "bench:ts": "node --loader ts-node/esm toolcall-bench.ts"
+    "bench": "node toolcall-bench.mjs",
+    "compare": "node compare-models.mjs"
   },
   "dependencies": {
     "ajv": "^8.17.1"
-  },
-  "devDependencies": {
-    "ts-node": "^10.9.2",
-    "typescript": "^5.6.3"
   }
 }
