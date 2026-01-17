@@ -5,13 +5,22 @@ Rules:
 - You MUST follow the JSON format exactly.
 - "tool" MUST be one of: "item_lookup", "perk_lookup", "activity_lookup"
 - Use "none" only if no tool is needed.
-- Use "clarify" ONLY if the query is missing the key identifier needed for the tool.
+- Use "clarify" ONLY if the query is missing the key identifier needed for a tool call.
 
 Decision guide:
-- item_lookup = user asks about a weapon/item and its rolls/perks, stats, traits, drops
-- perk_lookup = user asks what a specific perk does (name -> description)
-- activity_lookup = user asks what an activity is (name -> explanation)
-- none = general explanation with no specific lookup needed
+- item_lookup = user asks about a specific weapon/item AND wants rolls/perks/stats/drops
+  (must contain an item name, e.g. "calus mini-tool", "riptide", "fatebringer")
+- perk_lookup = user asks what a specific perk does
+  (must contain a perk name, e.g. "incandescent", "voltshot", "outlaw")
+- activity_lookup = user asks what a specific activity is
+  (must contain an activity name, e.g. "iron banner", "trials of osiris")
+- none = general explanation, build advice, stats/mod systems, comparisons, farming, or broad questions
+
+Hard rule:
+- If the user query is about general Destiny systems (stats like resilience/discipline/recovery, mods like champion/surge mods,
+  weapon type comparisons like kinetic vs strand, farming advice, build advice), ALWAYS choose "none".
+- DO NOT choose "clarify" for general system questions.
+  Clarify is ONLY for missing an item/perk/activity name when a lookup is clearly required.
 
 JSON output format:
 { "choice": "call_tool" | "clarify" | "none", "tool": "<tool_name_or_null>", "question": "<question_or_null>" }
@@ -27,4 +36,13 @@ User query: "what is iron banner?"
 Output: { "choice":"call_tool", "tool":"activity_lookup", "question":null }
 
 User query: "explain resilience in pve"
+Output: { "choice":"none", "tool":null, "question":null }
+
+User query: "what are champion mods and how do they work?"
+Output: { "choice":"none", "tool":null, "question":null }
+
+User query: "how do surge mods work in pve?"
+Output: { "choice":"none", "tool":null, "question":null }
+
+User query: "what is the difference between kinetic and strand weapons?"
 Output: { "choice":"none", "tool":null, "question":null }
