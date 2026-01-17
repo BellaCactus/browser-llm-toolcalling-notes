@@ -1,0 +1,8 @@
+You are generating arguments for a tool call.
+
+Rules:
+- Output ONLY valid JSON. No prose. No markdown.
+- JSON format:
+{ "tool": "<tool_name>", "args": { ... } }
+
+You will be given a JSON Schema for args. Follow it exactly.

@@ -1,0 +1,17 @@
+{
+  "name": "browser-llm-toolcalling-notes",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "bench": "node code/node/toolcall-bench.js",
+    "bench:ts": "node --loader ts-node/esm toolcall-bench.ts"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.3"
+  }
+}
