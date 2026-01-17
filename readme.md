@@ -13,7 +13,7 @@ tested with **local models (Ollama)** + built to compare against **in-browser (w
 
 ---
 
-## what is this?
+## what is this?z
 
 this repo is a **tiny benchmark + notes vault** for answering one question:
 
@@ -62,8 +62,8 @@ this harness measures:
 - **json validity**: did we parse JSON cleanly?
 - **schema validity**: did args match the JSON schema?
 - **tool accuracy**:
-  - *strict*: exact expected tool
-  - *acceptable*: “close enough” for practical routing
+  - **strict**: exact expected tool
+  - **acceptable**: “close enough” for practical routing
 - latency:
   - router ms
   - executor ms
@@ -79,24 +79,25 @@ this harness measures:
 
 ## project layout
 
+```txt
 notes/
-00-summary.md # main takeaways
-design.md # the protocol + design decisions
-05-next-steps.md # what to try next
+  00-summary.md           # main takeaways
+  design.md               # the protocol + design decisions
+  05-next-steps.md        # what to try next
 
 bench/
-cases.json # benchmark prompts + expected tool
-results/ # latest runs written here
+  cases.json              # benchmark prompts + expected tool
+  results/                # latest runs written here
 
 prompts/
-router.prompt.txt # choose tool (or none)
-executor.prompt.txt # generate tool args from schema
+  router.prompt.txt       # choose tool (or none)
+  executor.prompt.txt     # generate tool args from schema
 
 code/node/
-package.json
-toolcall-bench.mjs # bench runner
-compare-models.mjs # multi-model comparison runner (optional)
-
+  package.json
+  toolcall-bench.mjs      # bench runner
+  compare-models.mjs      # multi-model comparison runner (optional)
+```
 
 ---
 
@@ -110,73 +111,80 @@ compare-models.mjs # multi-model comparison runner (optional)
 ```bash
 cd code/node
 npm install
+```
 
-run the benchmark
-
+### run the benchmark
+```bash
 npm run bench
+```
 
-run a model comparison (if included)
-
+### run a model comparison (if included)
+```bash
 npm run compare
+```
 
-choose model
-
+### choose model
 in powershell:
-
+```powershell
 $env:MODEL="qwen2.5:14b"
 npm run bench
+```
 
-ollama notes (windows)
+---
 
-if ollama isn’t on PATH, you can still run it by absolute path:
+## ollama notes (windows)
 
+if `ollama` isn’t on PATH, you can still run it by absolute path:
+
+```powershell
 & "$env:LOCALAPPDATA\Programs\Ollama\ollama.exe" pull qwen2.5:14b
+```
 
 or define a quick helper function in your session:
 
+```powershell
 function ollama { & "$env:LOCALAPPDATA\Programs\Ollama\ollama.exe" @args }
+```
 
-important prompting rule
+---
 
-hard rule for router:
+## important prompting rule
+
+**hard rule for router:**
 
 if the query is about general destiny systems:
+- armor stats (resilience/discipline/recovery)
+- mods (champions/surges)
+- comparisons (kinetic vs strand)
+- farming / build advice
 
-    armor stats (resilience/discipline/recovery)
-
-    mods (champions/surges)
-
-    comparisons (kinetic vs strand)
-
-    farming / build advice
-
-ALWAYS choose "none".
+ALWAYS choose `"none"`.
 
 clarify is ONLY for missing item/perk/activity name when a lookup is clearly required.
 
 this single rule prevents most “wrong tool” failures.
-next upgrades (not done yet)
+
+---
+
+## next upgrades (not done yet)
 
 stuff that would make this even more real:
 
-    executor retry loop:
+- executor retry loop:
+  - invalid args -> repair -> retry once
+- browser backend runner:
+  - webllm runner
+  - transformers.js runner
+- longer test suite:
+  - more ambiguous queries
+  - multi-turn followups
+- real tool outputs:
+  - return a tiny condensed “tool result block”
+  - keep model context small
 
-        invalid args -> repair -> retry once
+---
 
-    browser backend runner:
+## license
 
-        webllm runner
-
-        transformers.js runner
-
-    longer test suite:
-
-        more ambiguous queries
-
-        multi-turn followups
-
-    real tool outputs:
-
-        return a tiny condensed “tool result block”
-
-        keep model context small
+do whatever you want with it.  
+this is a notes + testing sandbox repo.
