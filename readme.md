@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🖤 browser-llm-toolcalling-notes
+# ♡ browser-llm-toolcalling-notes
 
 mini lab notebook + benchmark harness for **LLM tool-calling** (router + executor)  
 tested with **local models (Ollama)** + built to compare against **in-browser (webllm / transformers.js)**
